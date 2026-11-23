@@ -1,11 +1,9 @@
 "use client";
-
 import { useRef, useState } from "react";
 import { ChevronRight, Search, UserPlus, UserRound } from "lucide-react";
 import { Verified } from "../ui/verified";
 import { admin, allowed, Confirm, date, ErrorNotice, submit, useAdminData, useOperation,
   type AdminProps, type Permission } from "./shared";
-
 type Person = {
   id: string; username: string | null; name: string | null; verified: boolean;
   deleted: boolean; avatar: boolean; review_account: boolean;
@@ -19,7 +17,6 @@ type Account = Person & {
   notice_preferences: Record<string, boolean>; owner?: boolean; permissions?: Permission[];
 };
 type Role = Person & { owner: boolean; permissions: Permission[] };
-
 export function Accounts(props: AdminProps) {
   const { lang, t, actor } = props;
   const canRead = allowed(actor, "accounts.read");
@@ -82,9 +79,7 @@ export function Accounts(props: AdminProps) {
     </section>
   </div>;
 }
-
 type CreatedReviewAccount = { id: string; username: string };
-
 function CreateReviewAccount({ t, lang, cancel, created }: AdminProps & {
   cancel?: () => void; created: (value: CreatedReviewAccount) => void;
 }) {
@@ -117,7 +112,6 @@ function CreateReviewAccount({ t, lang, cancel, created }: AdminProps & {
     </div>
   </form>;
 }
-
 function AccountEditor({ account, reload, ...props }: AdminProps & { account: Account; reload: () => void }) {
   const { t, lang, actor } = props;
   const operation = useOperation(lang);
@@ -133,7 +127,6 @@ function AccountEditor({ account, reload, ...props }: AdminProps & { account: Ac
   };
   const noticeKeys = ["all", "sound", "messages", "follow", "wall", "like", "reply", "mention"];
   const noticeLabels = [t.everyone, t.notices, t.messageAccess, t.following, t.wallAccess, t.likeAccess, t.comments, t.description];
-
   return <div className="control-stack">
     <div className="control-account-head">
       <div className="control-account-identity">
@@ -244,7 +237,6 @@ function AccountEditor({ account, reload, ...props }: AdminProps & { account: Ac
     </Confirm>}
   </div>;
 }
-
 export function Roles({ lang, t, actor }: AdminProps) {
   const roles = useAdminData<Role[]>("roles", lang);
   const operation = useOperation(lang);

@@ -1,5 +1,4 @@
 "use client";
-
 import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight, Gauge, ListChecks, ScrollText, ShieldCheck, Users } from "lucide-react";
 import { copy, storedLanguage, type Lang } from "../lib/locale";
@@ -8,7 +7,6 @@ import { Reports } from "./reports";
 import { Audit, Server } from "./server";
 import { admin, allowed, type Actor, type Permission } from "./shared";
 import "./control.css";
-
 const sections = {
   reports: { icon: ListChecks, permits: ["reports.review"] },
   accounts: { icon: Users, permits: ["accounts.read", "accounts.review.create"] },
@@ -17,14 +15,12 @@ const sections = {
   audit: { icon: ScrollText, permits: ["audit.read"] },
 } satisfies Record<string, { icon: typeof Users; permits: Permission[] }>;
 type Section = keyof typeof sections;
-
 export function Administration({ socialOrigin }: { socialOrigin: string }) {
   const [lang, setLang] = useState<Lang>("ru");
   const [actor, setActor] = useState<Actor | null | undefined>(undefined);
   const [section, setSection] = useState<Section>("reports");
   const request = useRef<Promise<Actor> | null>(null);
   const t = copy[lang].admin;
-
   useEffect(() => {
     setLang(storedLanguage());
     const requested = new URLSearchParams(window.location.search).get("section");
@@ -42,18 +38,15 @@ export function Administration({ socialOrigin }: { socialOrigin: string }) {
     }
     void request.current.then(setActor, () => setActor(null));
   }, []);
-
   useEffect(() => {
     document.documentElement.lang = lang;
     document.title = `${t.title} · killerwave`;
   }, [lang, t.title]);
-
   const languages = <div className="control-language">{(["ru", "en"] as const).map(value =>
     <button type="button" key={value} aria-pressed={value === lang} onClick={() => {
       setLang(value);
       localStorage.setItem("killerwave.lang", value);
     }}>{value === "ru" ? copy.ru.ruLabel : copy.en.enLabel}</button>)}</div>;
-
   if (!actor) return <main className="control control-entry">
     <header><img src="/logo.svg" width={28} height={28} alt="" />{t.title}</header>
     <section className="control-box">
@@ -64,18 +57,15 @@ export function Administration({ socialOrigin }: { socialOrigin: string }) {
       {languages}
     </section>
   </main>;
-
   const visible = (Object.keys(sections) as Section[]).filter(key => sections[key].permits.some(permit => allowed(actor, permit)));
   const active = visible.includes(section) ? section : visible[0];
   const props = { lang, actor, t, socialOrigin };
-
   function navigate(next: Section) {
     setSection(next);
     const url = new URL(window.location.href);
     url.searchParams.set("section", next);
     history.replaceState(null, "", url);
   }
-
   return <main className="control control-shell">
     <header className="control-top">
       <div className="control-top-inner">

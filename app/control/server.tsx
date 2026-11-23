@@ -1,11 +1,8 @@
 "use client";
-
 import { useMemo, useState } from "react";
 import { admin, allowed, Confirm, date, ErrorNotice, submit, useAdminData, useOperation, type AdminProps } from "./shared";
-
 type Entry = { id: string; actor: string; action: string; target: string | null; details: Record<string, unknown>;
   at: number; undone: boolean; delivered: boolean; can_undo: boolean };
-
 export function Audit({ actor, lang, t }: AdminProps) {
   const [offset,setOffset] = useState(0);
   const data = useAdminData<Entry[]>(`audit?offset=${offset}`,lang);
@@ -36,7 +33,6 @@ export function Audit({ actor, lang, t }: AdminProps) {
     )} error={operation.error} disabled={operation.busy}/>}
   </section>;
 }
-
 type Service = { name: string; state?: string; health?: string; uptime?: number; cpu?: string; memory?: string };
 type ServerState = {
   managed: boolean;
@@ -46,7 +42,6 @@ type ServerState = {
   env: { key: string; set: boolean }[] | null; jobs: { id: string; at: number; dispatched: boolean }[];
   results: Record<string,{ success: boolean }> | null;
 };
-
 export function Server({ actor, t, lang }: AdminProps) {
   const data = useAdminData<ServerState>("server",lang);
   const operation = useOperation(lang);
