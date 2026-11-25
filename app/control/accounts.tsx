@@ -2,6 +2,7 @@
 import { useRef, useState } from "react";
 import { ChevronRight, Search, UserPlus, UserRound } from "lucide-react";
 import { Verified } from "../ui/verified";
+import { AliasEditor } from "./aliases";
 import { admin, allowed, Confirm, date, ErrorNotice, submit, useAdminData, useOperation,
   type AdminProps, type Permission } from "./shared";
 type Person = {
@@ -20,15 +21,16 @@ type Role = Person & { owner: boolean; permissions: Permission[] };
 export function Accounts(props: AdminProps) {
   const { lang, t, actor } = props;
   const canRead = allowed(actor, "accounts.read");
+  const canBrowse = canRead || allowed(actor, "accounts.aliases.write");
   const canCreate = allowed(actor, "accounts.review.create");
-  const [creating, setCreating] = useState(!canRead);
+  const [creating, setCreating] = useState(!canBrowse);
   const [created, setCreated] = useState("");
   const [term, setTerm] = useState("");
   const [offset, setOffset] = useState(0);
-  const [selected, select] = useState<string | null>(null);
+  const [selected, select] = useState<Person | null>(null);
   const editor = useRef<HTMLElement>(null);
-  const listing = useAdminData<Person[]>(canRead ? `accounts?q=${encodeURIComponent(term)}&offset=${offset}` : null, lang);
-  const detail = useAdminData<Account>(canRead && selected ? `accounts/${selected}` : null, lang);
+  const listing = useAdminData<Person[]>(canBrowse ? `accounts?q=${encodeURIComponent(term)}&offset=${offset}` : null, lang);
+  const detail = useAdminData<Account>(canRead && selected ? `accounts/${selected.id}` : null, lang);
   return <div className="control-columns">
     <section className="control-box control-rail">
       {canCreate && <div className="control-actions">
@@ -36,17 +38,17 @@ export function Accounts(props: AdminProps) {
           <UserPlus size={16} aria-hidden="true" />{t.createReviewAccount}
         </button>
       </div>}
-      {canRead && <>
+      {canBrowse && <>
       <form className="control-inline" onSubmit={event => submit(event, data => { setOffset(0); setTerm(String(data.get("q") ?? "")); })}>
         <input type="search" name="q" placeholder={t.search} aria-label={t.search} maxLength={120}/><button aria-label={t.find} title={t.find}><Search size={16}/></button>
       </form>
       <ErrorNotice error={listing.error} />
       {listing.value?.length === 0 && <p>{t.empty}</p>}
-      <div className="control-list control-rail-list">{listing.value?.map(person => <button type="button" key={person.id} aria-pressed={person.id === selected}
+      <div className="control-list control-rail-list">{listing.value?.map(person => <button type="button" key={person.id} aria-pressed={person.id === selected?.id}
         onClick={() => {
           setCreating(false);
           setCreated("");
-          select(person.id);
+          select(person);
           if (window.matchMedia("(max-width: 760px)").matches) requestAnimationFrame(() => editor.current?.scrollIntoView({block:"start"}));
         }}>
         <UserRound size={18} /><span><strong>{person.name ?? person.id}{person.verified && <Verified lang={lang} size={15} />}</strong>
@@ -61,12 +63,12 @@ export function Accounts(props: AdminProps) {
     </section>
     <section className="control-box control-editor" ref={editor}>
       {created && <p role="status">{t.reviewAccountCreated.replace("{username}", `@${created}`)}</p>}
-      {creating && canCreate ? <CreateReviewAccount {...props} cancel={canRead ? () => setCreating(false) : undefined}
+      {creating && canCreate ? <CreateReviewAccount {...props} cancel={canBrowse ? () => setCreating(false) : undefined}
         created={({id, username}) => {
           setCreated(username);
-          if (canRead) {
+          if (canBrowse) {
             setCreating(false);
-            select(id);
+            select({ id, username, name: null, verified: false, deleted: false, avatar: false, review_account: true });
             setTerm("");
             setOffset(0);
             listing.reload();
@@ -75,6 +77,8 @@ export function Accounts(props: AdminProps) {
         <ErrorNotice error={detail.error} />
         {!selected && <p className="control-empty">{t.chooseAccount}</p>}
         {detail.value && <AccountEditor key={detail.value.id} {...props} account={detail.value} reload={() => { detail.reload(); listing.reload(); }} />}
+        {!canRead && selected?.username && !selected.deleted && <AliasEditor key={selected.id} id={selected.id}
+          username={selected.username} {...props} refresh={listing.reload} />}
       </>}
     </section>
   </div>;
@@ -116,11 +120,12 @@ function AccountEditor({ account, reload, ...props }: AdminProps & { account: Ac
   const { t, lang, actor } = props;
   const operation = useOperation(lang);
   const path = `accounts/${account.id}`;
-  const [tab,setTab] = useState<"profileTab" | "securityTab" | "sessionsTab">("profileTab");
+  const [tab,setTab] = useState<"profileTab" | "securityTab" | "sessionsTab" | "aliasesTitle">("profileTab");
   const [pending, setPending] = useState<{ label: string; run: () => Promise<unknown>; irreversible?: boolean } | null>(null);
   const can = (permission: Permission) => allowed(actor, permission) &&
     (!account.owner || actor.id === account.id) && (account.permissions?.every(perm => allowed(actor, perm)) ?? true);
   const update = (data: object) => admin(path, data);
+  const canEditAliases = !account.deleted && !!account.username && can("accounts.aliases.write");
   const request = (label: string, data: object, irreversible?: boolean) => {
     operation.reset();
     setPending({ label, run: () => update(data), irreversible });
@@ -148,9 +153,11 @@ function AccountEditor({ account, reload, ...props }: AdminProps & { account: Ac
       </div>
     </div>
     <div className="control-tabs control-editor-tabs">
-      {(["profileTab","securityTab","sessionsTab"] as const).filter(key=>key!=="sessionsTab" || account.sessions!=null).map(key=>
+      {(["profileTab","aliasesTitle","securityTab","sessionsTab"] as const).filter(key =>
+        (key !== "sessionsTab" || account.sessions != null) && (key !== "aliasesTitle" || canEditAliases)).map(key =>
         <button type="button" key={key} aria-pressed={tab===key} onClick={() => {operation.reset();setTab(key);}}>{t[key]}</button>)}
     </div>
+    {tab === "aliasesTitle" && canEditAliases && account.username && <AliasEditor id={account.id} username={account.username} {...props} refresh={reload} />}
     {!pending && <ErrorNotice error={operation.error} />}
     <section className="control-stack" hidden={tab!=="profileTab"} aria-label={t.profileTab}>
     <dl className="control-facts">
@@ -259,7 +266,7 @@ export function Roles({ lang, t, actor }: AdminProps) {
     </div>{roles.value?.length === 0 && <p>{t.empty}</p>}</section>
     {editable && <form className="control-box control-stack" onSubmit={event => {
       event.preventDefault();
-      void operation.run(() => admin(`roles/${encodeURIComponent(target.trim().replace(/^@/, ""))}`, { permissions }), roles.reload);
+      void operation.run(() => admin(`roles/${encodeURIComponent(target.trim())}`, { permissions }), roles.reload);
     }}>
       <label>{t.roleTarget}<input value={target} onChange={event => setTarget(event.target.value)} required maxLength={80}/></label>
       <div className="control-fields">{groups.map(group => {

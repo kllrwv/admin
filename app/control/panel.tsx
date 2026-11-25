@@ -9,7 +9,7 @@ import { admin, allowed, type Actor, type Permission } from "./shared";
 import "./control.css";
 const sections = {
   reports: { icon: ListChecks, permits: ["reports.review"] },
-  accounts: { icon: Users, permits: ["accounts.read", "accounts.review.create"] },
+  accounts: { icon: Users, permits: ["accounts.read", "accounts.review.create", "accounts.aliases.write"] },
   roles: { icon: ShieldCheck, permits: ["admins.read", "admins.grant"] },
   server: { icon: Gauge, permits: ["ops.read", "ops.restart", "ops.env.write"] },
   audit: { icon: ScrollText, permits: ["audit.read"] },
